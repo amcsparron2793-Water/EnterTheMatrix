@@ -40,47 +40,94 @@ class FrameDrawer(_TerminalFrame):
     GREEN = '\033[92m'
     BRIGHT_GREEN = '\033[38;5;46m'
     DIM_GREEN = '\033[38;5;22m'
+    RED = '\033[91m'
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.drops, self.speeds, self.lengths = self.initialize_columns()
 
-    def _draw_column_trail(self, i):
+    def character_within_terminal_bounds(self, vert_pos: int) -> bool:
+        return 0 <= vert_pos < self.terminal_lines
+
+    def _set_display_character(self, vert_pos: int, col_index: int):
+        # set display character to a random character from CHARS
+        # in the appropriate slot of the display list
+        self.display[vert_pos][col_index] = random.choice(self.__class__.CHARS)
+
+    def _set_character_color(self, vert_pos: int, col_index: int, trail_length: int):
+        # Color gradient: bright at head, dim at tail
+        # set the color of the character in the
+        # color's list to the same slot as the display list
+        if trail_length == 0:
+            self.colors[vert_pos][col_index] = self.__class__.BRIGHT_GREEN
+        elif trail_length < 3:
+            self.colors[vert_pos][col_index] = self.__class__.GREEN
+        else:
+            self.colors[vert_pos][col_index] = self.__class__.DIM_GREEN
+
+    def _draw_and_color_character(self, col_index: int, trail_length: int):
+        vert_pos = self.drops[col_index] - trail_length
+        if self.character_within_terminal_bounds(vert_pos):
+            self._set_display_character(vert_pos, col_index)
+
+            # Color gradient: bright at head, dim at tail
+            # set the color of the character in the
+            # color's list to the same slot as the display list
+            # if trail_length == 0:
+            #     self.colors[vert_pos][col_index] = self.__class__.BRIGHT_GREEN
+            # elif trail_length < 3:
+            #     self.colors[vert_pos][col_index] = self.__class__.GREEN
+            # else:
+            #     self.colors[vert_pos][col_index] = self.__class__.DIM_GREEN
+            self._set_character_color(vert_pos, col_index, trail_length)
+
+    def _draw_column_trail(self, col_index: int):
         # Draw the trail
-        for j in range(self.lengths[i]):
-            y = self.drops[i] - j
-            if 0 <= y < self.terminal_lines:
-                self.display[y][i] = random.choice(self.__class__.CHARS)
+        for trail_length in range(self.lengths[col_index]):
+            self._draw_and_color_character(col_index, trail_length)
+            # y = self.drops[col_index] - trail_length
+            # if self.character_within_terminal_bounds(y):
+            #     # set display character to a random character from CHARS
+            #     # in the appropriate slot of the display list
+            #     self.display[y][col_index] = random.choice(self.__class__.CHARS)
+            #
+            #     # Color gradient: bright at head, dim at tail
+            #     # set the color of the character in the
+            #     # colors list to the same slot as the display list
+            #     if trail_length == 0:
+            #         self.colors[y][col_index] = self.__class__.BRIGHT_GREEN
+            #     elif trail_length < 3:
+            #         self.colors[y][col_index] = self.__class__.GREEN
+            #     else:
+            #         self.colors[y][col_index] = self.__class__.DIM_GREEN
 
-                # Color gradient: bright at head, dim at tail
-                if j == 0:
-                    self.colors[y][i] = self.__class__.BRIGHT_GREEN
-                elif j < 3:
-                    self.colors[y][i] = self.__class__.GREEN
-                else:
-                    self.colors[y][i] = self.__class__.DIM_GREEN
+    def _reset_column(self, col_index):
+        self.drops[col_index] = 0
+        # get new speed and length for the column
+        self.speeds[col_index] = random.uniform(0.5, 1.5)
+        self.lengths[col_index] = random.randint(5, 25)
 
-    def _check_for_drop_off(self, i):
+    def _check_for_drop_off(self, col_index):
         # self.__class__.RESET column if it's gone off screen
-        if self.drops[i] > self.terminal_lines + self.lengths[i]:
-            self.drops[i] = 0
-            self.speeds[i] = random.uniform(0.5, 1.5)
-            self.lengths[i] = random.randint(5, 25)
+        drop_position = self.drops[col_index]
+        max_length_for_terminal = self.terminal_lines + self.lengths[col_index]
+        if drop_position > max_length_for_terminal:
+            self._reset_column(col_index)
 
     def _update_and_draw_columns(self):
         # Update and draw each column
-        for i in range(self.terminal_columns):
-            column_speed = self.speeds[i]
+        for col_index in range(self.terminal_columns):
+            column_speed = self.speeds[col_index]
             # creates blank space between columns
             column_skip_interval = max(1, int(2 / column_speed))
 
             # if the frame is divisible by the column skip interval,
             # draw a trail, otherwise skip it (shows as a blank column)
             if self.frame % column_skip_interval == 0:
-                self.drops[i] += 1
+                self.drops[col_index] += 1
 
-            self._check_for_drop_off(i)
-            self._draw_column_trail(i)
+            self._check_for_drop_off(col_index)
+            self._draw_column_trail(col_index)
 
     def initialize_columns(self):
         # Initialize columns

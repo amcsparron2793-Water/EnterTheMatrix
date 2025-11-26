@@ -18,18 +18,33 @@ class InitializeMatrix(FrameDrawer):
             Static introduction text displayed when starting the Matrix rain
             effect.
     """
-    INTRO_TEXT = "Starting Matrix rain effect...\nPress Ctrl+C to exit"
+    # TODO: turn "box" formatting into a function
+    INTRO_TEXT = """---------------\n| Starting Matrix rain effect... | \n| Press Ctrl+C to exit |\n---------------\n"""
 
-    @classmethod
-    def clean_exit(cls):
-        print(cls.SHOW_CURSOR)  # Show cursor
-        print(cls.RESET)
-        print("\n\nExiting Matrix...")
+    def center_string(self, string:str) -> str:
+        return f"{string:^{self.terminal_columns}}"
+
+    def _print_error_screen(self):
+        system('cls' if os_name == 'nt' else 'clear')
+        self._initialize_frame(error=True)
+        self.draw_frame()
+        error_text = f"{self.__class__.RED}Exiting Matrix...{self.__class__.RESET}"
+        print(f"\n{self.center_string(error_text)}")
+
+    def clean_exit(self):
+        print(self.__class__.SHOW_CURSOR)  # Show cursor
+        print(self.__class__.RESET)
+
+        self._print_error_screen()
+
         time.sleep(2)
         system('cls' if os_name == 'nt' else 'clear')
 
     def _print_intro(self):
-        print(self.__class__.INTRO_TEXT)
+        intro_lines = self.__class__.INTRO_TEXT.split('\n')
+        for ln in intro_lines:
+            intro_line = f"{self.__class__.GREEN}{self.center_string(ln)}{self.__class__.RESET}"
+            print(intro_line)
         time.sleep(2)
 
     def _sleep_and_advance_frame(self):
@@ -37,7 +52,7 @@ class InitializeMatrix(FrameDrawer):
         self.frame += 1
 
 
-class Matrix(InitializeMatrix):
+class EnterTheMatrix(InitializeMatrix):
     """
     Provides functionality for managing and displaying a dynamic matrix.
 
@@ -47,11 +62,12 @@ class Matrix(InitializeMatrix):
     interrupts for a clean shutdown.
     """
     @classmethod
-    def quick_dial_in(cls, **kwargs):
+    def quick_jack_in(cls, **kwargs):
         klass = cls(**kwargs)
-        return klass.enter_the_matrix()
+        return klass.jack_in()
 
-    def enter_the_matrix(self):
+    def jack_in(self):
+        self._print_intro()
         try:
             while True:
                 self._initialize_frame()
@@ -65,5 +81,5 @@ class Matrix(InitializeMatrix):
 
 
 if __name__ == "__main__":
-    m = Matrix()
-    m.enter_the_matrix()
+    m = EnterTheMatrix()
+    m.jack_in()
